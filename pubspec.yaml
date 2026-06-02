@@ -24,3 +24,5 @@ flutter:
 flutter_launcher_icons:
   android: true
   image_path: "assets/icon.png"
+
+  google_mobile_ads: ^5.1.0
