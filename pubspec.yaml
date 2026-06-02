@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.2.3
+  google_mobile_ads: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -25,4 +26,4 @@ flutter_launcher_icons:
   android: true
   image_path: "assets/icon.png"
 
-  google_mobile_ads: ^5.1.0
+ 
