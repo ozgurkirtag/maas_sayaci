@@ -38,7 +38,7 @@ class HomePage extends StatefulWidget {
 enum ModeType {
   wc('🚽', 'WC Modu', 'Bu WC molasında'),
   yemek('🍽️', 'Yemek Modu', 'Bu yemekte'),
-  toplantı('🤝', 'Toplantı Modu', 'Bu toplantıda'),
+  toplanti('🤝', 'Toplantı Modu', 'Bu toplantıda'),
   yatis('🛌', 'Yatış Modu', 'Yatarak');
 
   final String icon;
