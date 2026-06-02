@@ -1,9 +1,14 @@
-
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+const String kBannerAdUnitId = 'ca-app-pub-7094485651472008/3776015512';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await MobileAds.instance.initialize();
   runApp(const MaasSayaciApp());
 }
 
@@ -44,11 +49,13 @@ enum ModeType {
   final String icon;
   final String title;
   final String resultText;
+
   const ModeType(this.icon, this.title, this.resultText);
 }
 
 class _HomePageState extends State<HomePage> {
   final TextEditingController _salaryController = TextEditingController();
+
   Timer? _timer;
   double _monthlySalary = 0;
   DateTime _now = DateTime.now();
@@ -56,6 +63,9 @@ class _HomePageState extends State<HomePage> {
   ModeType? _activeMode;
   DateTime? _modeStart;
   String? _lastModeResult;
+
+  BannerAd? _bannerAd;
+  bool _isBannerAdReady = false;
 
   double get _perSecond => _monthlySalary / 30 / 24 / 60 / 60;
   double get _perMinute => _perSecond * 60;
@@ -85,14 +95,40 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadSalary();
+    _loadBannerAd();
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _now = DateTime.now());
     });
   }
 
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: kBannerAdUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isBannerAdReady = true;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          setState(() {
+            _isBannerAdReady = false;
+          });
+        },
+      ),
+    );
+
+    _bannerAd!.load();
+  }
+
   Future<void> _loadSalary() async {
     final prefs = await SharedPreferences.getInstance();
     final value = prefs.getDouble('monthlySalary') ?? 0;
+
     setState(() {
       _monthlySalary = value;
       if (value > 0) {
@@ -104,18 +140,22 @@ class _HomePageState extends State<HomePage> {
   Future<void> _saveSalary() async {
     final raw = _salaryController.text.replaceAll('.', '').replaceAll(',', '.');
     final value = double.tryParse(raw);
+
     if (value == null || value <= 0) {
       _showSnack('Geçerli bir maaş gir kral.');
       return;
     }
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('monthlySalary', value);
+
     setState(() {
       _monthlySalary = value;
       _lastModeResult = null;
       _activeMode = null;
       _modeStart = null;
     });
+
     _showSnack('Maaş kaydedildi. Sayaç akmaya başladı 💰');
   }
 
@@ -124,6 +164,7 @@ class _HomePageState extends State<HomePage> {
       _showSnack('Önce aylık maaşını gir.');
       return;
     }
+
     setState(() {
       _activeMode = mode;
       _modeStart = DateTime.now();
@@ -133,8 +174,10 @@ class _HomePageState extends State<HomePage> {
 
   void _stopMode() {
     if (_activeMode == null || _modeStart == null) return;
+
     final amount = _activeModeEarned;
     final mode = _activeMode!;
+
     setState(() {
       _lastModeResult = '${mode.resultText} ${_money(amount)} kazandın 😄';
       _activeMode = null;
@@ -143,7 +186,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showSnack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text)),
+    );
   }
 
   String _money(double value) {
@@ -152,6 +197,7 @@ class _HomePageState extends State<HomePage> {
     final whole = parts[0];
     final decimal = parts[1];
     final buffer = StringBuffer();
+
     for (int i = 0; i < whole.length; i++) {
       final reverseIndex = whole.length - i;
       buffer.write(whole[i]);
@@ -159,6 +205,7 @@ class _HomePageState extends State<HomePage> {
         buffer.write('.');
       }
     }
+
     return '₺${buffer.toString()},$decimal';
   }
 
@@ -166,78 +213,97 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _timer?.cancel();
     _salaryController.dispose();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final hasSalary = _monthlySalary > 0;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Maaş Sayacı'),
         centerTitle: true,
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(18),
+        child: Column(
           children: [
-            Text(
-              'Maaşın çalışıyor. Sen ne yapıyorsun?',
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _salaryController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Aylık net maaş',
-                        hintText: 'Örn: 80000',
-                        prefixText: '₺ ',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _saveSalary,
-                        child: const Text('Kaydet ve Başlat'),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Hesaplama 30 gün üzerinden yapılır. Hafta sonu ve tatilde de sayaç akar.',
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            if (hasSalary) ...[
-              _bigCounterCard(),
-              const SizedBox(height: 12),
-              _statsGrid(),
-              const SizedBox(height: 18),
-              _modeSection(),
-              const SizedBox(height: 18),
-              _funCard(),
-            ] else
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(18),
-                  child: Text(
-                    'Maaşını gir, sayaç 7/24 akmaya başlasın.',
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(18),
+                children: [
+                  Text(
+                    'Maaşın çalışıyor. Sen ne yapıyorsun?',
+                    style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: 18),
+                  _salaryInputCard(),
+                  const SizedBox(height: 18),
+                  if (hasSalary) ...[
+                    _bigCounterCard(),
+                    const SizedBox(height: 12),
+                    _statsGrid(),
+                    const SizedBox(height: 18),
+                    _modeSection(),
+                    const SizedBox(height: 18),
+                    _funCard(),
+                  ] else
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(18),
+                        child: Text(
+                          'Maaşını gir, sayaç 7/24 akmaya başlasın.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
+            ),
+            if (_isBannerAdReady && _bannerAd != null)
+              Container(
+                width: _bannerAd!.size.width.toDouble(),
+                height: _bannerAd!.size.height.toDouble(),
+                alignment: Alignment.center,
+                child: AdWidget(ad: _bannerAd!),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _salaryInputCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _salaryController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Aylık net maaş',
+                hintText: 'Örn: 80000',
+                prefixText: '₺ ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _saveSalary,
+                child: const Text('Kaydet ve Başlat'),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Hesaplama 30 gün üzerinden yapılır. Hafta sonu ve tatilde de sayaç akar.',
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -300,7 +366,10 @@ class _HomePageState extends State<HomePage> {
           children: [
             Text(title),
             const SizedBox(height: 6),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
@@ -323,13 +392,19 @@ class _HomePageState extends State<HomePage> {
               Text(
                 '${_activeMode!.icon} ${_activeMode!.title} çalışıyor',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 _money(_activeModeEarned),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 10),
               FilledButton.tonal(
