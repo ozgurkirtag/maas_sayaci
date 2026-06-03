@@ -111,6 +111,18 @@ jobs:
           PY
 
       - run: flutter build appbundle --release
+            - name: Re-sign AAB with upload key
+        run: |
+          jarsigner -verbose \
+            -sigalg SHA256withRSA \
+            -digestalg SHA-256 \
+            -keystore android/app/upload-keystore.jks \
+            -storepass maas123456 \
+            -keypass maas123456 \
+            build/app/outputs/bundle/release/app-release.aab \
+            upload
+
+          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab | grep "CN=Kirtag Apps"
 
       - uses: actions/upload-artifact@v4
         with:
