@@ -22,6 +22,24 @@ jobs:
       - run: flutter create --platforms=android .
 
       - run: flutter pub get
+      - name: Add AdMob App ID to AndroidManifest
+  run: |
+    python3 - <<'PY'
+    from pathlib import Path
+
+    manifest = Path("android/app/src/main/AndroidManifest.xml")
+    text = manifest.read_text()
+
+    app_id_meta = '''
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-7094485651472008~1952328186"/>
+    '''
+
+    if "com.google.android.gms.ads.APPLICATION_ID" not in text:
+        text = text.replace("</application>", app_id_meta + "\n    </application>")
+        manifest.write_text(text)
+    PY
 
       - run: flutter build apk --release
 
