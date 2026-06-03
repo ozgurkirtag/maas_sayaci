@@ -26,6 +26,74 @@ jobs:
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
+      - name: Create upload keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/app/upload-keystore.jks \
+            -storetype JKS \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -alias upload \
+            -storepass maas123456 \
+            -keypass maas123456 \
+            -dname "CN=Kirtag Apps, OU=Kirtag Apps, O=Kirtag Apps, L=Istanbul, S=Istanbul, C=TR"
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=maas123456
+          keyPassword=maas123456
+          keyAlias=upload
+          storeFile=upload-keystore.jks
+          EOF
+
+      - name: Patch Kotlin Gradle signing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("android/app/build.gradle.kts")
+          text = p.read_text()
+
+          if "val keystoreProperties" not in text:
+              text = text.replace(
+                  "plugins {",
+                  """import java.util.Properties
+          import java.io.FileInputStream
+
+          val keystoreProperties = Properties()
+          val keystorePropertiesFile = rootProject.file("key.properties")
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+          }
+
+          plugins {"""
+              )
+
+          if "create(\"release\")" not in text:
+              text = text.replace(
+                  "android {",
+                  """android {
+              signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["keyPassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+              }
+          """
+              )
+
+          text = text.replace(
+              "signingConfig = signingConfigs.getByName(\"debug\")",
+              "signingConfig = signingConfigs.getByName(\"release\")"
+          )
+
+          p.write_text(text)
+          PY
+
       - name: Add AdMob App ID to AndroidManifest
         run: |
           python3 - <<'PY'
@@ -45,84 +113,9 @@ jobs:
               manifest.write_text(text)
           PY
 
-      - name: Create release keystore
-        run: |
-          keytool -genkey -v \
-            -keystore android/app/upload-keystore.jks \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -alias upload \
-            -storepass maas123456 \
-            -keypass maas123456 \
-            -dname "CN=Kirtag Apps, OU=Kirtag Apps, O=Kirtag Apps, L=Istanbul, S=Istanbul, C=TR"
-
-      - name: Create key.properties
-        run: |
-          cat > android/key.properties <<EOF
-          storePassword=maas123456
-          keyPassword=maas123456
-          keyAlias=upload
-          storeFile=upload-keystore.jks
-          EOF
-
-      - name: Patch Gradle signing config
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("android/app/build.gradle")
-          text = p.read_text()
-
-          if "keystoreProperties" not in text:
-              text = text.replace(
-                  "android {",
-                  """def keystoreProperties = new Properties()
-          def keystorePropertiesFile = rootProject.file('key.properties')
-          if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-          }
-
-          android {"""
-              )
-
-          text = text.replace(
-              "signingConfig signingConfigs.debug",
-              "signingConfig signingConfigs.release"
-          )
-
-          if "signingConfigs {" not in text:
-              text = text.replace(
-                  "defaultConfig {",
-                  """signingConfigs {
-              release {
-                  keyAlias keystoreProperties['keyAlias']
-                  keyPassword keystoreProperties['keyPassword']
-                  storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-                  storePassword keystoreProperties['storePassword']
-              }
-          }
-
-              defaultConfig {"""
-              )
-          else:
-              text = text.replace(
-                  "signingConfigs {",
-                  """signingConfigs {
-              release {
-                  keyAlias keystoreProperties['keyAlias']
-                  keyPassword keystoreProperties['keyPassword']
-                  storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-                  storePassword keystoreProperties['storePassword']
-              }"""
-              )
-
-          p.write_text(text)
-          PY
-
       - run: flutter build appbundle --release
 
       - uses: actions/upload-artifact@v4
         with:
-          name: maas-sayaci-aab-release
+          name: maas-sayaci-aab-release-signed
           path: build/app/outputs/bundle/release/app-release.aab
