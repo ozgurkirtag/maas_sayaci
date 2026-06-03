@@ -19,12 +19,33 @@ jobs:
         with:
           flutter-version: '3.24.5'
 
-      - run: flutter create --project-name maas_sayaci --platforms=android .
+      - name: Create Android project
+        run: flutter create --project-name maas_sayaci --org com.kirtagapps --platforms=android .
 
-      - run: flutter pub get
+      - name: Get packages
+        run: flutter pub get
 
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
+
+      - name: Add AdMob App ID
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text()
+
+          meta = """
+              <meta-data
+                  android:name="com.google.android.gms.ads.APPLICATION_ID"
+                  android:value="ca-app-pub-7094485651472008~1952328186"/>
+          """
+
+          if "com.google.android.gms.ads.APPLICATION_ID" not in text:
+              text = text.replace("</application>", meta + "\n    </application>")
+              manifest.write_text(text)
+          PY
 
       - name: Create upload keystore
         run: |
@@ -39,80 +60,14 @@ jobs:
             -keypass maas123456 \
             -dname "CN=Kirtag Apps, OU=Kirtag Apps, O=Kirtag Apps, L=Istanbul, S=Istanbul, C=TR"
 
-      - name: Create key.properties
+      - name: Build release AAB
+        run: flutter build appbundle --release
+
+      - name: Remove debug signature if exists
         run: |
-          cat > android/key.properties <<EOF
-          storePassword=maas123456
-          keyPassword=maas123456
-          keyAlias=upload
-          storeFile=upload-keystore.jks
-          EOF
+          zip -d build/app/outputs/bundle/release/app-release.aab "META-INF/*" || true
 
-      - name: Patch Gradle signing config
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          gradle = Path("android/app/build.gradle")
-          text = gradle.read_text()
-
-          if "def keystoreProperties" not in text:
-              text = text.replace(
-                  "android {",
-                  """def keystoreProperties = new Properties()
-          def keystorePropertiesFile = rootProject.file('key.properties')
-          if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-          }
-
-          android {"""
-              )
-
-          if "release {" not in text:
-              text = text.replace(
-                  "android {",
-                  """android {
-              signingConfigs {
-                  release {
-                      keyAlias keystoreProperties['keyAlias']
-                      keyPassword keystoreProperties['keyPassword']
-                      storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-                      storePassword keystoreProperties['storePassword']
-                  }
-              }
-          """
-              )
-
-          text = text.replace(
-              "signingConfig signingConfigs.debug",
-              "signingConfig signingConfigs.release"
-          )
-
-          gradle.write_text(text)
-          PY
-
-      - name: Add AdMob App ID to AndroidManifest
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          manifest = Path("android/app/src/main/AndroidManifest.xml")
-          text = manifest.read_text()
-
-          app_id_meta = '''
-              <meta-data
-                  android:name="com.google.android.gms.ads.APPLICATION_ID"
-                  android:value="ca-app-pub-7094485651472008~1952328186"/>
-          '''
-
-          if "com.google.android.gms.ads.APPLICATION_ID" not in text:
-              text = text.replace("</application>", app_id_meta + "\n    </application>")
-              manifest.write_text(text)
-          PY
-
-            - run: flutter build appbundle --release
-
-      - name: Re-sign AAB with upload key
+      - name: Sign AAB with upload key
         run: |
           jarsigner -verbose \
             -sigalg SHA256withRSA \
@@ -123,7 +78,10 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab \
             upload
 
-          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab | grep "CN=Kirtag Apps" Apps"
+      - name: Verify release signature
+        run: |
+          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab
+          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab | grep "CN=Kirtag Apps"
 
       - uses: actions/upload-artifact@v4
         with:
