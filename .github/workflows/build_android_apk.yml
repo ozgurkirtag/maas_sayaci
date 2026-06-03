@@ -110,8 +110,9 @@ jobs:
               manifest.write_text(text)
           PY
 
-      - run: flutter build appbundle --release
-            - name: Re-sign AAB with upload key
+            - run: flutter build appbundle --release
+
+      - name: Re-sign AAB with upload key
         run: |
           jarsigner -verbose \
             -sigalg SHA256withRSA \
@@ -122,7 +123,7 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab \
             upload
 
-          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab | grep "CN=Kirtag Apps"
+          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab | grep "CN=Kirtag Apps" Apps"
 
       - uses: actions/upload-artifact@v4
         with:
