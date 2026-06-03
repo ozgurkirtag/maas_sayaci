@@ -48,50 +48,47 @@ jobs:
           storeFile=upload-keystore.jks
           EOF
 
-      - name: Patch Kotlin Gradle signing
+      - name: Patch Gradle signing config
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          p = Path("android/app/build.gradle.kts")
-          text = p.read_text()
+          gradle = Path("android/app/build.gradle")
+          text = gradle.read_text()
 
-          if "val keystoreProperties" not in text:
+          if "def keystoreProperties" not in text:
               text = text.replace(
-                  "plugins {",
-                  """import java.util.Properties
-          import java.io.FileInputStream
-
-          val keystoreProperties = Properties()
-          val keystorePropertiesFile = rootProject.file("key.properties")
+                  "android {",
+                  """def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
           if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
           }
 
-          plugins {"""
+          android {"""
               )
 
-          if "create(\"release\")" not in text:
+          if "release {" not in text:
               text = text.replace(
                   "android {",
                   """android {
               signingConfigs {
-                  create("release") {
-                      keyAlias = keystoreProperties["keyAlias"] as String
-                      keyPassword = keystoreProperties["keyPassword"] as String
-                      storeFile = file(keystoreProperties["storeFile"] as String)
-                      storePassword = keystoreProperties["storePassword"] as String
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+                      storePassword keystoreProperties['storePassword']
                   }
               }
           """
               )
 
           text = text.replace(
-              "signingConfig = signingConfigs.getByName(\"debug\")",
-              "signingConfig = signingConfigs.getByName(\"release\")"
+              "signingConfig signingConfigs.debug",
+              "signingConfig signingConfigs.release"
           )
 
-          p.write_text(text)
+          gradle.write_text(text)
           PY
 
       - name: Add AdMob App ID to AndroidManifest
