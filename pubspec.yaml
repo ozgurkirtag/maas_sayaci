@@ -24,6 +24,6 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  image_path: "assets/icon.png"
+  image_path: "assets/maas_sayaci_icon_v2_safe.png"
 
  
