@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android AAB
 
 on:
   workflow_dispatch:
@@ -45,9 +45,9 @@ jobs:
               manifest.write_text(text)
           PY
 
-      - run: flutter build apk --release
+      - run: flutter build appbundle --release
 
       - uses: actions/upload-artifact@v4
         with:
-          name: maas-sayaci-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: maas-sayaci-aab
+          path: build/app/outputs/bundle/release/app-release.aab
