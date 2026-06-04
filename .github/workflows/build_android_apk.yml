@@ -27,6 +27,10 @@ jobs:
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/g' android/app/build.gradle
           sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 35/g' android/app/build.gradle
 
+      - name: Restore fixed upload keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+
       - name: Get packages
         run: flutter pub get
 
@@ -52,19 +56,6 @@ jobs:
               manifest.write_text(text)
           PY
 
-      - name: Create upload keystore
-        run: |
-          keytool -genkeypair -v \
-            -keystore android/app/upload-keystore.jks \
-            -storetype JKS \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -alias upload \
-            -storepass maas123456 \
-            -keypass maas123456 \
-            -dname "CN=Kirtag Apps, OU=Kirtag Apps, O=Kirtag Apps, L=Istanbul, S=Istanbul, C=TR"
-
       - name: Build release AAB
         run: flutter build appbundle --release
 
@@ -72,25 +63,22 @@ jobs:
         run: |
           zip -d build/app/outputs/bundle/release/app-release.aab "META-INF/*" || true
 
-      - name: Sign AAB with upload key
+      - name: Sign AAB with fixed upload key
         run: |
           jarsigner -verbose \
             -sigalg SHA256withRSA \
             -digestalg SHA-256 \
             -keystore android/app/upload-keystore.jks \
-            -storepass maas123456 \
-            -keypass maas123456 \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
             build/app/outputs/bundle/release/app-release.aab \
-            upload
+            "${{ secrets.KEY_ALIAS }}"
 
       - name: Verify release signature
         run: |
           jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab
-          jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab | grep "CN=Kirtag Apps"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: maas-sayaci-aab-and-keystore
-          path: |
-            build/app/outputs/bundle/release/app-release.aab
-            android/app/upload-keystore.jks
+          name: maas-sayaci-aab-fixed-keystore
+          path: build/app/outputs/bundle/release/app-release.aab
