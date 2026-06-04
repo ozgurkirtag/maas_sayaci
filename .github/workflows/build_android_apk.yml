@@ -88,7 +88,7 @@ jobs:
           jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab
           jarsigner -verify -verbose -certs build/app/outputs/bundle/release/app-release.aab | grep "CN=Kirtag Apps"
 
-            - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: maas-sayaci-aab-and-keystore
           path: |
