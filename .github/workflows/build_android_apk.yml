@@ -20,7 +20,7 @@ jobs:
           flutter-version: '3.24.5'
 
       - name: Create Android project
-        run: flutter create --project-name maassayaci --org com.kirtagapps --platforms=android .
+        run: flutter create --project-name maassayaci2 --org com.kirtagapps --platforms=android .
 
       - name: Set Android SDK 35
         run: |
