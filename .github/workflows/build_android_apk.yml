@@ -18,18 +18,22 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.8'
+          channel: stable
 
       - name: Create Android project
         run: flutter create --project-name maassayaci2 --org com.kirtagapps --platforms=android .
 
-      - name: Set Android SDK 35 and 16 KB page size compatibility
+      - name: Set Android SDK 35
         run: |
-          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/g' android/app/build.gradle
-          sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 35/g' android/app/build.gradle
-          sed -i 's/id "com.android.application" version "[^"]*"/id "com.android.application" version "8.7.3"/g' android/settings.gradle
-          sed -i 's/distributionUrl=.*/distributionUrl=https\\://services.gradle.org/distributions/gradle-8.10.2-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
-          echo "android.bundle.enableUncompressedNativeLibs=false" >> android/gradle.properties
-          sed -i '/android {/a\    packagingOptions {\n        jniLibs {\n            useLegacyPackaging = true\n        }\n    }' android/app/build.gradle
+          python3 <<'PY'
+          from pathlib import Path
+          for file in [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]:
+              if file.exists():
+                  s = file.read_text()
+                  s = s.replace("compileSdk = flutter.compileSdkVersion", "compileSdk = 35")
+                  s = s.replace("targetSdk = flutter.targetSdkVersion", "targetSdk = 35")
+                  file.write_text(s)
+          PY
 
       - name: Restore fixed upload keystore
         run: |
@@ -45,16 +49,13 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
-
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           text = manifest.read_text()
-
           meta = """
               <meta-data
                   android:name="com.google.android.gms.ads.APPLICATION_ID"
                   android:value="ca-app-pub-7094485651472008~1952328186"/>
           """
-
           if "com.google.android.gms.ads.APPLICATION_ID" not in text:
               text = text.replace("</application>", meta + "\n    </application>")
               manifest.write_text(text)
