@@ -17,16 +17,19 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.32.8'
 
       - name: Create Android project
         run: flutter create --project-name maassayaci2 --org com.kirtagapps --platforms=android .
 
-      - name: Set Android SDK 35 and 16 KB native library alignment
+      - name: Set Android SDK 35 and 16 KB page size compatibility
         run: |
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/g' android/app/build.gradle
           sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 35/g' android/app/build.gradle
-          sed -i '/android {/a\    packagingOptions {\n        jniLibs {\n            useLegacyPackaging = false\n        }\n    }' android/app/build.gradle
+          sed -i 's/id "com.android.application" version "[^"]*"/id "com.android.application" version "8.7.3"/g' android/settings.gradle
+          sed -i 's/distributionUrl=.*/distributionUrl=https\\://services.gradle.org/distributions/gradle-8.10.2-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
+          echo "android.bundle.enableUncompressedNativeLibs=false" >> android/gradle.properties
+          sed -i '/android {/a\    packagingOptions {\n        jniLibs {\n            useLegacyPackaging = true\n        }\n    }' android/app/build.gradle
 
       - name: Restore fixed upload keystore
         run: |
