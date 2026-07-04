@@ -121,44 +121,109 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tools = [
-      _Tool('💰', 'Maaş Sayacı', 'Canlı maaş akışını takip et', const SalaryCounterPage()),
-      _Tool('📈', 'Zam Hesapla', 'Zam oranına göre yeni maaşı hesapla', const RaiseCalculatorPage()),
-      _Tool('⏰', 'Fazla Mesai', 'Saatlik fazla mesai ücretini hesapla', const OvertimeCalculatorPage()),
-      _Tool('🏖️', 'İzin Hesabı', 'Çalışma yılına göre izin gününü gör', const LeaveCalculatorPage()),
-      _Tool('💼', 'Kıdem Tazminatı', 'Tahmini kıdem tazminatını hesapla', const SeveranceCalculatorPage()),
-      _Tool('📅', 'Maaş Günü', 'Maaşa kalan gün ve saati gör', const PaydayCountdownPage()),
-      _Tool('🧾', 'Vergi Dilimi', 'Yıllık gelirine göre tahmini dilimi gör', const TaxBracketPage()),
-      _Tool('🎁', 'Prim Hesaplayıcı', 'Satış ve oranla prim tutarını hesapla', const BonusCalculatorPage()),
+      _Tool('💰', 'Maaş Sayacı', 'Maaşının ay boyunca nasıl aktığını canlı takip et.', const SalaryCounterPage()),
+      _Tool('📈', 'Zam Hesabı', 'Zam oranına göre yeni maaşını hızlıca hesapla.', const RaiseCalculatorPage()),
+      _Tool('⏱️', 'Fazla Mesai', 'Saatlik mesai ücretini ve toplam kazancını gör.', const OvertimeCalculatorPage()),
+      _Tool('🏖️', 'İzin Hesabı', 'Çalışma yılına göre yıllık izin hakkını hesapla.', const LeaveCalculatorPage()),
+      _Tool('💼', 'Kıdem Tazminatı', 'Tahmini kıdem tazminatını pratik şekilde gör.', const SeveranceCalculatorPage()),
+      _Tool('📅', 'Maaş Günü', 'Maaşa kalan gün, saat ve dakikayı takip et.', const PaydayCountdownPage()),
+      _Tool('🧾', 'Vergi Dilimi', 'Gelirine göre tahmini vergi dilimini öğren.', const TaxBracketPage()),
+      _Tool('🎁', 'Prim Hesabı', 'Satış tutarı ve oranla prim kazancını hesapla.', const BonusCalculatorPage()),
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Maaş Sayacı'), centerTitle: true),
+      backgroundColor: const Color(0xFF07130D),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
                 children: [
-                  Card(
-                    color: const Color(0xFF12351F),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          const Text('Maaş Asistanı', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Maaş, zam, fazla mesai, izin, kıdem, vergi ve prim hesaplamaları tek yerde.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white.withOpacity(.82)),
-                          ),
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF14532D),
+                          Color(0xFF052E16),
+                          Color(0xFF020617),
                         ],
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(.35),
+                          blurRadius: 22,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 54,
+                              height: 54,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(.10),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: Colors.white.withOpacity(.12)),
+                              ),
+                              child: const Text('💸', style: TextStyle(fontSize: 30)),
+                            ),
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Maaş Asistanı',
+                                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'V2 Çalışan Araçları',
+                                    style: TextStyle(color: Color(0xFF86EFAC), fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          'Maaş, zam, fazla mesai, izin, kıdem, vergi ve prim hesaplamaları tek uygulamada.',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(.84),
+                            height: 1.35,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  ...tools.map((tool) => _ToolCard(tool: tool, onTap: () => _open(context, tool.page))),
+                  const SizedBox(height: 18),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: tools.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: .98,
+                    ),
+                    itemBuilder: (context, index) {
+                      final tool = tools[index];
+                      return _ToolCard(tool: tool, onTap: () => _open(context, tool.page));
+                    },
+                  ),
                 ],
               ),
             ),
@@ -185,13 +250,53 @@ class _ToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
+    return Material(
+      color: const Color(0xFF0F1F17),
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
         onTap: onTap,
-        leading: Text(tool.icon, style: const TextStyle(fontSize: 30)),
-        title: Text(tool.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(tool.subtitle),
-        trailing: const Icon(Icons.chevron_right),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(.08)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(tool.icon, style: const TextStyle(fontSize: 34)),
+              const Spacer(),
+              Text(
+                tool.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                tool.subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12.5, color: Colors.white.withOpacity(.68), height: 1.25),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text(
+                    'Aç',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
