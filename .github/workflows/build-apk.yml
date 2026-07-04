@@ -2,38 +2,65 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.5"
+          flutter-version: '3.32.8'
           channel: stable
 
-      - name: Flutter pub get
+      - name: Create Android project
+        run: flutter create --project-name maassayaci2 --org com.kirtagapps --platforms=android .
+
+      - name: Set Android SDK 35
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          for file in [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]:
+              if file.exists():
+                  s = file.read_text()
+                  s = s.replace("compileSdk = flutter.compileSdkVersion", "compileSdk = 35")
+                  s = s.replace("targetSdk = flutter.targetSdkVersion", "targetSdk = 35")
+                  file.write_text(s)
+          PY
+
+      - name: Get packages
         run: flutter pub get
 
-      - name: Build APK
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Add AdMob App ID
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text()
+          meta = """
+              <meta-data
+                  android:name="com.google.android.gms.ads.APPLICATION_ID"
+                  android:value="ca-app-pub-7094485651472008~1952328186"/>
+          """
+          if "com.google.android.gms.ads.APPLICATION_ID" not in text:
+              text = text.replace("</application>", meta + "\n    </application>")
+              manifest.write_text(text)
+          PY
+
+      - name: Build release APK
         run: flutter build apk --release
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: maas-sayaci-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
