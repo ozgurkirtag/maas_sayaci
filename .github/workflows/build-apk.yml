@@ -21,7 +21,7 @@ jobs:
           channel: stable
 
       - name: Create Android project
-        run: flutter create --project-name maassayaci2 --org com.kirtagapps --platforms=android .
+        run: flutter create --project-name maassayaci2 --org com.kirtagapps.maassayaci2 --platforms=android .
 
       - name: Set Android SDK 35
         run: |
