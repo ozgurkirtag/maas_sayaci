@@ -873,13 +873,18 @@ class _SeveranceCalculatorPageState extends State<SeveranceCalculatorPage> {
     super.dispose();
   }
 
+  static const double kidemTavani2026SecondHalf = 73729.87;
+
   void calculate() {
     final salary = parseMoney(grossSalary.text);
     final y = parseMoney(years.text);
     final m = parseMoney(months.text);
     if (salary <= 0 || (y <= 0 && m <= 0)) return;
+
+    final cappedSalary = salary > kidemTavani2026SecondHalf ? kidemTavani2026SecondHalf : salary;
+
     setState(() {
-      result = salary * (y + (m / 12));
+      result = cappedSalary * (y + (m / 12));
     });
   }
 
@@ -895,8 +900,13 @@ class _SeveranceCalculatorPageState extends State<SeveranceCalculatorPage> {
           Expanded(child: NumberField(controller: months, label: 'Ay', hint: '6')),
         ]),
         CalcButton(onPressed: calculate),
-        if (result != null) ResultCard(title: 'Tahmini kıdem tazminatı', value: money(result!)),
-        const AppInfoNote('Not: Kıdem tazminatında tavan tutar, damga vergisi ve hak kazanma şartları bulunur. Sonuç tahminidir.'),
+        if (result != null)
+          ResultCard(
+            title: 'Tahmini kıdem tazminatı',
+            value: money(result!),
+            subtitle: '2026/2 kıdem tavanı dikkate alınmıştır: ${money(kidemTavani2026SecondHalf)}',
+          ),
+        const AppInfoNote('Not: Hesaplamada 01.07.2026 - 31.12.2026 dönemi kıdem tazminatı tavanı kullanılır. Damga vergisi, hak kazanma şartları ve özel durumlar sonucu değiştirebilir. Sonuç bilgilendirme amaçlıdır.'),
       ],
     );
   }
