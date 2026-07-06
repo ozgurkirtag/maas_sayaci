@@ -852,6 +852,7 @@ class _LeaveCalculatorPageState extends State<LeaveCalculatorPage> {
   }
 }
 
+
 class SeveranceCalculatorPage extends StatefulWidget {
   const SeveranceCalculatorPage({super.key});
 
@@ -861,30 +862,71 @@ class SeveranceCalculatorPage extends StatefulWidget {
 
 class _SeveranceCalculatorPageState extends State<SeveranceCalculatorPage> {
   final grossSalary = TextEditingController();
-  final years = TextEditingController();
-  final months = TextEditingController();
+  DateTime? startDate;
   double? result;
+  String? serviceText;
+
+  static const double kidemTavani2026SecondHalf = 73729.87;
 
   @override
   void dispose() {
     grossSalary.dispose();
-    years.dispose();
-    months.dispose();
     super.dispose();
   }
 
-  static const double kidemTavani2026SecondHalf = 73729.87;
+  Future<void> pickStartDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: startDate ?? DateTime(now.year - 1, now.month, now.day),
+      firstDate: DateTime(1970),
+      lastDate: now,
+    );
+    if (picked != null) {
+      setState(() => startDate = picked);
+    }
+  }
+
+  String dateText(DateTime? d) {
+    if (d == null) return 'İşe giriş tarihini seç';
+    return '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
+  }
+
+  Map<String, int> serviceBreakdown(DateTime start, DateTime end) {
+    int y = end.year - start.year;
+    DateTime anniversary = DateTime(start.year + y, start.month, start.day);
+    if (anniversary.isAfter(end)) {
+      y--;
+      anniversary = DateTime(start.year + y, start.month, start.day);
+    }
+
+    int m = (end.year - anniversary.year) * 12 + end.month - anniversary.month;
+    DateTime monthDate = DateTime(anniversary.year, anniversary.month + m, anniversary.day);
+    if (monthDate.isAfter(end)) {
+      m--;
+      monthDate = DateTime(anniversary.year, anniversary.month + m, anniversary.day);
+    }
+
+    final d = end.difference(monthDate).inDays;
+    return {'years': y, 'months': m, 'days': d};
+  }
 
   void calculate() {
     final salary = parseMoney(grossSalary.text);
-    final y = parseMoney(years.text);
-    final m = parseMoney(months.text);
-    if (salary <= 0 || (y <= 0 && m <= 0)) return;
+    if (salary <= 0 || startDate == null) return;
+
+    final now = DateTime.now();
+    final service = serviceBreakdown(startDate!, now);
+    final y = service['years']!;
+    final m = service['months']!;
+    final d = service['days']!;
 
     final cappedSalary = salary > kidemTavani2026SecondHalf ? kidemTavani2026SecondHalf : salary;
+    final serviceRatio = y + (m / 12) + (d / 365);
 
     setState(() {
-      result = cappedSalary * (y + (m / 12));
+      result = cappedSalary * serviceRatio;
+      serviceText = '$y yıl $m ay $d gün';
     });
   }
 
@@ -894,17 +936,17 @@ class _SeveranceCalculatorPageState extends State<SeveranceCalculatorPage> {
       title: 'Kıdem Tazminatı',
       children: [
         MoneyField(controller: grossSalary, label: 'Aylık brüt maaş', hint: '50000'),
-        Row(children: [
-          Expanded(child: NumberField(controller: years, label: 'Yıl', hint: '4')),
-          const SizedBox(width: 8),
-          Expanded(child: NumberField(controller: months, label: 'Ay', hint: '6')),
-        ]),
+        OutlinedButton.icon(
+          onPressed: pickStartDate,
+          icon: const Icon(Icons.calendar_month),
+          label: Text(dateText(startDate)),
+        ),
         CalcButton(onPressed: calculate),
         if (result != null)
           ResultCard(
             title: 'Tahmini kıdem tazminatı',
             value: money(result!),
-            subtitle: '2026/2 kıdem tavanı dikkate alınmıştır: ${money(kidemTavani2026SecondHalf)}',
+            subtitle: 'Çalışma süresi: $serviceText\n2026/2 kıdem tavanı dikkate alınmıştır: ${money(kidemTavani2026SecondHalf)}',
           ),
         const AppInfoNote('Not: Hesaplamada 01.07.2026 - 31.12.2026 dönemi kıdem tazminatı tavanı kullanılır. Damga vergisi, hak kazanma şartları ve özel durumlar sonucu değiştirebilir. Sonuç bilgilendirme amaçlıdır.'),
       ],
@@ -990,6 +1032,7 @@ class _PaydayCountdownPageState extends State<PaydayCountdownPage> {
   }
 }
 
+
 class TaxBracketPage extends StatefulWidget {
   const TaxBracketPage({super.key});
 
@@ -1001,7 +1044,8 @@ class _TaxBracketPageState extends State<TaxBracketPage> {
   final monthlyGross = TextEditingController();
   final month = TextEditingController(text: DateTime.now().month.toString());
   String? bracket;
-  double? annual;
+  double? cumulativeBase;
+  double? monthlyTaxBase;
 
   @override
   void dispose() {
@@ -1014,21 +1058,26 @@ class _TaxBracketPageState extends State<TaxBracketPage> {
     final gross = parseMoney(monthlyGross.text);
     final m = parseMoney(month.text).round().clamp(1, 12);
     if (gross <= 0) return;
-    final cumulative = gross * m;
+
+    final base = gross * 0.85; // SGK %14 + işsizlik %1 düşülmüş yaklaşık gelir vergisi matrahı
+    final cumulative = base * m;
+
     String b;
-    if (cumulative <= 110000) {
+    if (cumulative <= 190000) {
       b = '%15';
-    } else if (cumulative <= 230000) {
+    } else if (cumulative <= 400000) {
       b = '%20';
-    } else if (cumulative <= 870000) {
+    } else if (cumulative <= 1500000) {
       b = '%27';
-    } else if (cumulative <= 3000000) {
+    } else if (cumulative <= 5300000) {
       b = '%35';
     } else {
       b = '%40';
     }
+
     setState(() {
-      annual = cumulative;
+      monthlyTaxBase = base;
+      cumulativeBase = cumulative;
       bracket = b;
     });
   }
@@ -1042,8 +1091,12 @@ class _TaxBracketPageState extends State<TaxBracketPage> {
         NumberField(controller: month, label: 'Kaçıncı ay', hint: '7'),
         CalcButton(onPressed: calculate),
         if (bracket != null)
-          ResultCard(title: 'Tahmini vergi dilimi', value: bracket!, subtitle: 'Kümülatif gelir: ${money(annual!)}'),
-        const AppInfoNote('Not: Vergi dilimleri yıllara göre değişebilir. Bu ekran basit tahmini takip içindir.'),
+          ResultCard(
+            title: 'Tahmini vergi dilimi',
+            value: bracket!,
+            subtitle: 'Aylık tahmini matrah: ${money(monthlyTaxBase!)}\nKümülatif matrah: ${money(cumulativeBase!)}',
+          ),
+        const AppInfoNote('Not: Hesaplama yaklaşık gelir vergisi matrahı üzerinden yapılır. SGK, işsizlik primi, istisnalar ve bordro detayları gerçek sonucu değiştirebilir. Sonuç bilgilendirme amaçlıdır.'),
       ],
     );
   }
