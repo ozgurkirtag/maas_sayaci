@@ -217,7 +217,7 @@ class DashboardPage extends StatelessWidget {
                       crossAxisCount: 2,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childAspectRatio: .98,
+                      childAspectRatio: .88,
                     ),
                     itemBuilder: (context, index) {
                       final tool = tools[index];
@@ -280,20 +280,8 @@ class _ToolCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 12.5, color: Colors.white.withOpacity(.68), height: 1.25),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Text(
-                    'Aç',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
-                ],
-              ),
+              const SizedBox(height: 4),
+              Icon(Icons.arrow_forward_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
             ],
           ),
         ),
