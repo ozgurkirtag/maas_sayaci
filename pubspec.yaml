@@ -1,7 +1,7 @@
 name: maas_sayaci
 description: Maas Sayaci - maasin 30 gun boyunca nasil aktigini canli izleyen eglenceli uygulama.
 publish_to: 'none'
-version: 1.3.0+7
+version: 1.3.2+9
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
