@@ -5,6 +5,70 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String kBannerAdUnitId = 'ca-app-pub-7094485651472008/3776015512';
+const String kRewardedAdUnitId = 'ca-app-pub-7094485651472008/2039047961';
+
+RewardedAd? _rewardedAd;
+bool _rewardedAdLoading = false;
+
+void loadRewardedAd() {
+  if (_rewardedAdLoading || _rewardedAd != null) return;
+  _rewardedAdLoading = true;
+
+  RewardedAd.load(
+    adUnitId: kRewardedAdUnitId,
+    request: const AdRequest(),
+    rewardedAdLoadCallback: RewardedAdLoadCallback(
+      onAdLoaded: (ad) {
+        _rewardedAd = ad;
+        _rewardedAdLoading = false;
+      },
+      onAdFailedToLoad: (error) {
+        _rewardedAd = null;
+        _rewardedAdLoading = false;
+      },
+    ),
+  );
+}
+
+Future<void> showRewardedAd({
+  required BuildContext context,
+  required VoidCallback onReward,
+}) async {
+  final ad = _rewardedAd;
+
+  if (ad == null) {
+    loadRewardedAd();
+    onReward();
+    return;
+  }
+
+  _rewardedAd = null;
+  bool rewarded = false;
+
+  ad.fullScreenContentCallback = FullScreenContentCallback(
+    onAdDismissedFullScreenContent: (ad) {
+      ad.dispose();
+      loadRewardedAd();
+      if (!rewarded && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hesaplama için reklamı tamamlamalısın.')),
+        );
+      }
+    },
+    onAdFailedToShowFullScreenContent: (ad, error) {
+      ad.dispose();
+      loadRewardedAd();
+      onReward();
+    },
+  );
+
+  await ad.show(
+    onUserEarnedReward: (_, __) {
+      rewarded = true;
+      onReward();
+    },
+  );
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -708,7 +772,7 @@ class _RaiseCalculatorPageState extends State<RaiseCalculatorPage> {
       children: [
         MoneyField(controller: salary, label: 'Mevcut maaş', hint: '40000'),
         PercentField(controller: rate, label: 'Zam oranı', hint: '25'),
-        CalcButton(onPressed: calculate),
+        CalcButton(onPressed: () => showRewardedAd(context: context, onReward: calculate)),
         if (newSalary != null) ...[
           ResultCard(title: 'Yeni maaş', value: money(newSalary!), subtitle: 'Maaş artışı: ${money(increase!)}'),
           _ScenarioCard(baseSalary: parseMoney(salary.text)),
@@ -783,7 +847,7 @@ class _OvertimeCalculatorPageState extends State<OvertimeCalculatorPage> {
       children: [
         MoneyField(controller: salary, label: 'Aylık brüt / net maaş', hint: '40000'),
         NumberField(controller: hours, label: 'Fazla mesai saati', hint: '12'),
-        CalcButton(onPressed: calculate),
+        CalcButton(onPressed: () => showRewardedAd(context: context, onReward: calculate)),
         if (overtime != null)
           ResultCard(title: 'Tahmini fazla mesai', value: money(overtime!), subtitle: 'Saatlik mesai: ${money(hourly!)}\nHesaplama: aylık ücret / 225 saat x 1,5'),
         const AppInfoNote('Not: Fazla mesai hesapları çalışma düzeni, sözleşme ve mevzuata göre değişebilir. Bu sonuç bilgilendirme amaçlıdır.'),
@@ -941,7 +1005,7 @@ class _SeveranceCalculatorPageState extends State<SeveranceCalculatorPage> {
           icon: const Icon(Icons.calendar_month),
           label: Text(dateText(startDate)),
         ),
-        CalcButton(onPressed: calculate),
+        CalcButton(onPressed: () => showRewardedAd(context: context, onReward: calculate)),
         if (result != null)
           ResultCard(
             title: 'Tahmini kıdem tazminatı',
@@ -1089,7 +1153,7 @@ class _TaxBracketPageState extends State<TaxBracketPage> {
       children: [
         MoneyField(controller: monthlyGross, label: 'Aylık brüt gelir', hint: '50000'),
         NumberField(controller: month, label: 'Kaçıncı ay', hint: '7'),
-        CalcButton(onPressed: calculate),
+        CalcButton(onPressed: () => showRewardedAd(context: context, onReward: calculate)),
         if (bracket != null)
           ResultCard(
             title: 'Tahmini vergi dilimi',
@@ -1135,7 +1199,7 @@ class _BonusCalculatorPageState extends State<BonusCalculatorPage> {
       children: [
         MoneyField(controller: sales, label: 'Satış / ciro tutarı', hint: '250000'),
         PercentField(controller: rate, label: 'Prim oranı', hint: '3'),
-        CalcButton(onPressed: calculate),
+        CalcButton(onPressed: () => showRewardedAd(context: context, onReward: calculate)),
         if (bonus != null) ResultCard(title: 'Tahmini prim', value: money(bonus!)),
       ],
     );
