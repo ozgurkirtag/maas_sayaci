@@ -23,15 +23,15 @@ jobs:
       - name: Create Android project
         run: flutter create --project-name maassayaci2 --org com.kirtagapps --platforms=android .
 
-      - name: Set Android SDK 35
+      - name: Set Android SDK 36
         run: |
           python3 <<'PY'
           from pathlib import Path
           for file in [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]:
               if file.exists():
                   s = file.read_text()
-                  s = s.replace("compileSdk = flutter.compileSdkVersion", "compileSdk = 35")
-                  s = s.replace("targetSdk = flutter.targetSdkVersion", "targetSdk = 35")
+                  s = s.replace("compileSdk = flutter.compileSdkVersion", "compileSdk = 36")
+                  s = s.replace("targetSdk = flutter.targetSdkVersion", "targetSdk = 36")
                   file.write_text(s)
           PY
 
